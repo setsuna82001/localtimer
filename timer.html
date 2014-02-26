@@ -1,0 +1,102 @@
+<html lang="ja">
+	<head>
+		<title>my_timer</title>
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+		<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>
+		<script>
+			var timer;
+			function setTimer(){
+				var slct_type	= $('#slct_type option:selected').val();
+				var time_volume	= $('#txt_time').val().replace( /[０-９：]/g, function( str ){
+					return String.fromCharCode( str.charCodeAt( 0 ) - 0xFEE0 );
+				} );
+				
+				if( /^\d+:\d+$/.test( time_volume ) ){
+					var list = time_volume.split(':');
+				}else{
+					alert( 'Input text is illegal' );
+					return false;
+				}
+				
+				if( !( Array.prototype.slice.apply( 
+						$( '#slct_type option' ).map( function() { return $( this ).val(); } )
+					).some( function( type ){ return type === slct_type; } )
+				) ){
+					alert( 'Illegal Select Box value' );
+					return false;
+				}
+				
+				obj = new Date();
+					corrent	= ( ( obj.getHours()      * 60 ) + obj.getMinutes()    ) * 60 + obj.getSeconds() ;
+				
+				if( slct_type == 'static' ){
+					target	= ( ( parseInt( list[0] ) * 60 ) + parseInt( list[1] ) ) * 60 + 0 ;
+				}else{
+					target	= ( ( obj.getHours()      * 60 ) + obj.getMinutes() + parseInt( list[0] ) ) * 60 + obj.getSeconds() + parseInt( list[1] ) ;
+				}
+				
+				convert = target - corrent;
+				if( target < corrent ){
+					alert( 'Target Time is smaller than now' );
+					return false;
+				}
+				
+				$('#txt_alert').attr('disabled','disabled');
+				$('#txt_time').attr('disabled','disabled');
+				$('#btn_start').attr('disabled','disabled');
+				$('#div_time').css('display','block');
+				$('#txt_min').val( parseInt( convert / 60 ) );
+				$('#txt_sec').val( convert % 60 );
+				return true;
+			}
+			
+			function cntStart(){
+				if( setTimer() ){
+					timer = setInterval( 'countDown()', 1000 );
+				}else{
+					resetAll();
+				}
+			}
+
+			function countDown(){
+				if( $('#txt_sec').val() == 0 ){
+					$('#txt_sec').val( 59 );
+					$('#txt_min').val( parseInt( $('#txt_min').val() ) - 1 );
+				}else{
+					$('#txt_sec').val( parseInt( $('#txt_sec').val() ) - 1 );
+					if( $('#txt_sec').val() == 0  && $('#txt_min').val() == 0 ){
+						var text = ( $('#txt_alert').val().length > 0 ) ? $('#txt_alert').val() : 'TimeUp!' ;
+						alert( text );
+						resetAll();
+					}
+				}
+				return false;
+			}
+
+			function resetAll(){
+				$('#div_time').css('display','none');
+				$('#txt_alert').removeAttr('disabled');
+				$('#txt_time').removeAttr('disabled').val('');
+				$('#btn_start').removeAttr('disabled');
+				clearInterval( timer );
+			}
+		</script>
+	</head>
+	<body>
+		<form name="timer">
+			<select id="slct_type">
+				<option value="dynamic">残</option>
+				<option value="static">迄</option>
+			</select>
+			<input id="txt_time"  style="display: block;" type="text" value="">
+			<div   id="div_time"  style="display: none;">
+				<input id="txt_min" type="text" value="" >分
+				<input id="txt_sec" type="text" value="" >秒
+			</div>
+			<input id="btn_start" type="button" value="スタート" onclick="cntStart()">
+			<input id="btn_reset" type="button" value="リセット" onclick="resetAll()">
+			
+			<input id="txt_alert" style="display: block;" type="text" value="">
+		</form>
+	</body>
+</html>
