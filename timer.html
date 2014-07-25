@@ -1,102 +1,162 @@
 <html lang="ja">
-	<head>
-		<title>my_timer</title>
-		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-		<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>
-		<script>
-			var timer;
-			function setTimer(){
-				var slct_type	= $('#slct_type option:selected').val();
-				var time_volume	= $('#txt_time').val().replace( /[０-９：]/g, function( str ){
-					return String.fromCharCode( str.charCodeAt( 0 ) - 0xFEE0 );
-				} );
-				
-				if( /^\d+:\d+$/.test( time_volume ) ){
-					var list = time_volume.split(':');
-				}else{
-					alert( 'Input text is illegal' );
-					return false;
-				}
-				
-				if( !( Array.prototype.slice.apply( 
-						$( '#slct_type option' ).map( function() { return $( this ).val(); } )
-					).some( function( type ){ return type === slct_type; } )
-				) ){
-					alert( 'Illegal Select Box value' );
-					return false;
-				}
-				
-				obj = new Date();
-					corrent	= ( ( obj.getHours()      * 60 ) + obj.getMinutes()    ) * 60 + obj.getSeconds() ;
-				
-				if( slct_type == 'static' ){
-					target	= ( ( parseInt( list[0] ) * 60 ) + parseInt( list[1] ) ) * 60 + 0 ;
-				}else{
-					target	= ( ( obj.getHours()      * 60 ) + obj.getMinutes() + parseInt( list[0] ) ) * 60 + obj.getSeconds() + parseInt( list[1] ) ;
-				}
-				
-				convert = target - corrent;
-				if( target < corrent ){
-					alert( 'Target Time is smaller than now' );
-					return false;
-				}
-				
-				$('#txt_alert').attr('disabled','disabled');
-				$('#txt_time').attr('disabled','disabled');
-				$('#btn_start').attr('disabled','disabled');
-				$('#div_time').css('display','block');
-				$('#txt_min').val( parseInt( convert / 60 ) );
-				$('#txt_sec').val( convert % 60 );
-				return true;
-			}
-			
-			function cntStart(){
-				if( setTimer() ){
-					timer = setInterval( 'countDown()', 1000 );
-				}else{
-					resetAll();
-				}
-			}
+  <head>
+    <title>my_timer</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <script type="text/javascript" src="/js/jquery.1.4.2.min.js"></script>
+    <script>
+      var interval;
+      var Timer = function(){
+        this.target   = 0;
+        this.convert  = 0;
+        
+        //========================================
+        // this.setTimer()
+        //========================================
+        this.setTimer = function(){
+          var slct_type   = $('#slct_type option:selected').val();
+          var time_volume = $('#txt_time').val().replace( /[０-９：]/g, function( str ){
+            return String.fromCharCode( str.charCodeAt( 0 ) - 0xFEE0 );
+          } );
 
-			function countDown(){
-				if( $('#txt_sec').val() == 0 ){
-					$('#txt_sec').val( 59 );
-					$('#txt_min').val( parseInt( $('#txt_min').val() ) - 1 );
-				}else{
-					$('#txt_sec').val( parseInt( $('#txt_sec').val() ) - 1 );
-					if( $('#txt_sec').val() == 0  && $('#txt_min').val() == 0 ){
-						var text = ( $('#txt_alert').val().length > 0 ) ? $('#txt_alert').val() : 'TimeUp!' ;
-						alert( text );
-						resetAll();
-					}
-				}
-				return false;
-			}
+          if( /^\d+:\d+$/.test( time_volume ) ){
+            var list = time_volume.split(':');
+          }else{
+            alert( 'Input text is illegal' );
+            return false;
+          }
 
-			function resetAll(){
-				$('#div_time').css('display','none');
-				$('#txt_alert').removeAttr('disabled');
-				$('#txt_time').removeAttr('disabled').val('');
-				$('#btn_start').removeAttr('disabled');
-				clearInterval( timer );
-			}
-		</script>
-	</head>
-	<body>
-		<form name="timer">
-			<select id="slct_type">
-				<option value="dynamic">残</option>
-				<option value="static">迄</option>
-			</select>
-			<input id="txt_time"  style="display: block;" type="text" value="">
-			<div   id="div_time"  style="display: none;">
-				<input id="txt_min" type="text" value="" >分
-				<input id="txt_sec" type="text" value="" >秒
-			</div>
-			<input id="btn_start" type="button" value="スタート" onclick="cntStart()">
-			<input id="btn_reset" type="button" value="リセット" onclick="resetAll()">
-			
-			<input id="txt_alert" style="display: block;" type="text" value="">
-		</form>
-	</body>
+          if( !(
+            Array
+              .prototype
+              .slice
+              .apply( $( '#slct_type option' ).map( function() { return $( this ).val(); } ) )
+              .some( function( type ){ return type === slct_type; } )
+          ) ){
+            alert( 'Illegal Select Box value' );
+            return false;
+          }
+          
+          corrent     = this.makeCorrent();
+          this.target = this.makeTarget( slct_type, list );
+
+          if( this.target < corrent ){
+            alert( 'Target Time is smaller than now' );
+            return false;
+          }
+          
+          $( '#txt_alert' ).attr( 'disabled', 'disabled' );
+          $( '#txt_time'  ).attr( 'disabled', 'disabled' );
+          $( '#btn_start' ).attr( 'disabled', 'disabled' );
+          $( '#div_time'  ).css( 'display', 'block' );
+          
+          this.convert = this.target - corrent;
+          if( this.convert > 0 ){
+            this.setTxtTime( this.convert );
+            return true;
+          }else{
+            this.finishProcess();
+            return false;
+          }
+        };
+
+        //========================================
+        // this.countDown()
+        //========================================
+        this.countDown = function(){
+          this.convert = this.target - this.makeCorrent();
+          
+          if( this.convert <= 0 ){
+            this.finishProcess();
+          }else{
+            this.setTxtTime( this.convert );
+          }
+          return false;
+        };
+        
+        //========================================
+        // this.finishProcess()
+        //========================================
+        this.finishProcess = function(){
+          this.setTxtTime( 0 );
+          var mess = $( '#txt_alert' ).val();
+          var text = ( mess.length > 0 ) ? mess : 'TimeUp!' ;
+          alert( text );
+          resetAll();
+        };
+        
+        //========================================
+        // this.makeCorrent()
+        //========================================
+        this.makeCorrent = function(){
+          date = new Date();
+          return this.makeTimeSec( date.getHours(), date.getMinutes(), date.getSeconds() );
+        };
+        
+        //========================================
+        // this.makeTarget( type, list )
+        //========================================
+        this.makeTarget = function( type, list ){
+          switch ( type ){
+            case 'static' : return this.makeTimeSec( list[0], list[1], 0 );
+            case 'dynamic':
+              date = new Date();
+              return this.makeTimeSec(
+                date.getHours(),
+                ( date.getMinutes() + parseInt( list[0] ) ),
+                ( date.getSeconds() + parseInt( list[1] ) )
+              );
+          }
+        };
+        
+        //========================================
+        // this.makeTimeSec( hour, min, sec )
+        //========================================
+        this.makeTimeSec = function( hour, min, sec ){
+          return ( ( parseInt( hour ) * 60 + parseInt( min ) ) * 60 + parseInt( sec ) );
+        };
+        
+        //========================================
+        // this.setTxtTime( num )
+        //========================================
+        this.setTxtTime = function( num ){
+          $( '#txt_sec' ).val( num % 60 );
+          $( '#txt_min' ).val( parseInt( num / 60 ) );
+        };
+      };
+
+      function cntStart(){
+        var timer = new Timer();
+        if( timer.setTimer() ){
+          interval = setInterval( function(){ timer.countDown() }, 1000-1 );
+        }else{
+          resetAll();
+        }
+      }
+
+      function resetAll(){
+        $( '#div_time'  ).css( 'display','none' );
+        $( '#txt_alert' ).removeAttr( 'disabled' );
+        $( '#txt_time'  ).removeAttr( 'disabled' ).val('');
+        $( '#btn_start' ).removeAttr( 'disabled' );
+        clearInterval( interval );
+      }
+    </script>
+  </head>
+  <body>
+    <form name="timer">
+      <select id="slct_type">
+        <option value="dynamic">残</option>
+        <option value="static" >迄</option>
+      </select>
+      <input id="txt_time"  style="display: block;" type="text" value="">
+      <div   id="div_time"  style="display: none;">
+        <input id="txt_min" type="text" value="" >分
+        <input id="txt_sec" type="text" value="" >秒
+      </div>
+      <input id="btn_start" type="button" value="start" onclick="cntStart()">
+      <input id="btn_reset" type="button" value="reset" onclick="resetAll()">
+
+      <input id="txt_alert" style="display: block;" type="text" value="" placeholder="Time Up Phrase Input Here">
+    </form>
+  </body>
 </html>
